@@ -111,6 +111,46 @@
       font-size: 10px;
       color: #6b7280;
       margin-top: 10px;
+ /* BTC top bar (updated layout) */
+.top-strip {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 14px 16px;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  color: #e5edf5;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+  min-height: 70px;
+}
+
+.top-strip__title {
+  font-size: 12px;
+  text-transform: uppercase;
+  opacity: 0.75;
+  letter-spacing: 0.1em;
+}
+
+.top-strip__price {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.top-strip__meta span {
+  margin-right: 12px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.top-strip__link a {
+  font-size: 11px;
+  color: #f7931a;
+  text-decoration: none;
+}
     }
   </style>
 </head>
