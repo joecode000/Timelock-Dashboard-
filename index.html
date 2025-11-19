@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>BTC Timelock Monitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top, #0b1120 0, #020617 55%);
+      color: #e5edf5;
+    }
+    .app {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 16px 14px 24px;
+    }
+    .app-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+      color: #f7931a;
+      margin-bottom: 4px;
+    }
+    .app-subtitle {
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 14px;
+    }
+    .meta-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #9ca3af;
+      margin-bottom: 8px;
+    }
+    .tag {
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.92);
+    }
+    .group-title {
+      font-size: 12px;
+      font-weight: 500;
+      margin: 14px 0 6px;
+      color: #d1d5db;
+    }
+    .card {
+      border-radius: 16px;
+      border: 1px solid #1f2937;
+      background: rgba(15, 23, 42, 0.96);
+      padding: 10px 12px 8px;
+      margin-bottom: 8px;
+      box-shadow: 0 14px 32px rgba(0,0,0,0.6);
+    }
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 4px;
+    }
+    .label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .status-pill {
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #1f2937;
+    }
+    .status-locked {
+      background: rgba(127, 29, 29, 0.9);
+      color: #fecaca;
+      border-color: #7f1d1d;
+    }
+    .status-soon {
+      background: rgba(120, 53, 15, 0.9);
+      color: #fed7aa;
+      border-color: #92400e;
+    }
+    .status-unlocked {
+      background: rgba(22, 101, 52, 0.9);
+      color: #bbf7d0;
+      border-color: #15803d;
+    }
+    .status-spent {
+      background: rgba(17, 24, 39, 0.9);
+      color: #9ca3af;
+      border-color: #374151;
+    }
+    .address {
+      font-size: 10px;
+      color: #9ca3af;
+      word-break: break-all;
+      margin-bottom: 4px;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+    .row span:last-child {
+      font-variant-numeric: tabular-nums;
+    }
+    .hint {
+      font-size: 10px;
+      color: #6b7280;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="app-title">Timelock Monitor</div>
+  <div class="app-subtitle">Multi-address BTC watch, grouped timelocks, color status, mobile-ready.</div>
+  <div class="meta-row">
+    <span class="tag" id="block-height">Height: …</span>
+    <span class="tag" id="last-updated">Updating…</span>
+  </div>
+  <div id="groups"></div>
+  <div class="hint">
+    • Green = unlocked & unspent · Red = locked · Amber = unlocking soon · Gray = spent.<br>
+    • Grant notification permission when prompted to get alerts on balance changes.
+  </div>
+</div>
+
+<script>
+  // === CONFIG YOU EDIT ===
+  const CONFIG = {
+    network: "main", // "main" for mainnet
+    // How often to refresh (ms)
+    refreshMs: 30000,
+    // How many blocks before unlock to treat as "soon"
+    soonThresholdBlocks: 144, // ~1 day
+    // Data source: BlockCypher simple usage
+    apiBase: "https://api.blockcypher.com/v1/btc/main",
+    // Addresses you want to monitor
+    // For timelocks, you manually enter unlock info you used when creating them.
+    addresses: [
+      {
+        label: "Vault A – Long CLTV",
+        address: "3KMrnQymf9gfu1QzYTepCGy8rv4Je2nHby",
+        group: "Long Timelocks",
+        unlockType: "height",      // "height" or "time"
+        unlockHeight: 900000,      // if unlockType === "height"
+        unlockTimeUnix: null       // if unlockType === "time" (Unix seconds), else null
+      },
+      {
+        label: "Vault B – 2026 Release",
+        address: "YOUR_SECOND_ADDRESS_HERE",
+        group: "Medium Timelocks",
+        unlockType: "time",
+        unlockHeight: null,
+        unlockTimeUnix: 1780000000 // example future timestamp
+      },
+      {
+        label: "Hot Watch Only",
+        address: "YOUR_THIRD_ADDRESS_HERE",
+        group: "Hot / Operational",
+        unlockType: null,
+        unlockHeight: null,
+        unlockTimeUnix: null
+      }
+    ]
+  };
+
+  // === SIMPLE HELPERS ===
+  function satsToBtc(sats) {
+    return (sats / 100000000).toFixed(8);
+  }
+
+  function unixToLocal(unix) {
+    if (!unix) return "—";
+    return new Date(unix * 1000).toLocaleString();
+  }
+
+  function updateMeta(height) {
+    document.getElementById("block-height").textContent = "Height: " + height;
+    document.getElementById("last-updated").textContent =
+      "Updated: " + new Date().toLocaleTimeString();
+  }
+
+  function computeStatus(addrCfg, height, balance, totalReceived) {
+    // If nothing ever received
+    if (!totalReceived) {
+      return { status: "locked", label: "No funds yet" };
+    }
+
+    const nowUnix = Math.floor(Date.now() / 1000);
+
+    // Spent (no current balance, but something was received)
+    if (balance === 0) {
+      return { status: "spent", label: "Spent" };
+    }
+
+    // If no timelock metadata, treat as "unlocked"
+    if (!addrCfg.unlockType) {
+      return { status: "unlocked", label: "Live / No Timelock" };
+    }
+
+    if (addrCfg.unlockType === "height" && addrCfg.unlockHeight) {
+      const remaining = addrCfg.unlockHeight - height;
+      if (remaining > CONFIG.soonThresholdBlocks) {
+        return { status: "locked", label: `Locked · ${remaining} blocks left` };
+      } else if (remaining > 0) {
+        return { status: "soon", label: `Unlocking soon · ${remaining} blocks` };
+      } else {
+        return { status: "unlocked", label: `Unlocked at height ${addrCfg.unlockHeight}` };
+      }
+    }
+
+    if (addrCfg.unlockType === "time" && addrCfg.unlockTimeUnix) {
+      const remainingSec = addrCfg.unlockTimeUnix - nowUnix;
+      if (remainingSec > 48 * 3600) {
+        return { status: "locked", label: "Locked until " + unixToLocal(addrCfg.unlockTimeUnix) };
+      } else if (remainingSec > 0) {
+        return { status: "soon", label: "Unlocking soon · " + Math.round(remainingSec / 3600) + "h" };
+      } else {
+        return { status: "unlocked", label: "Unlocked at " + unixToLocal(addrCfg.unlockTimeUnix) };
+      }
+    }
+
+    return { status: "unlocked", label: "Live" };
+  }
+
+  function render(groupsData) {
+    const container = document.getElementById("groups");
+    container.innerHTML = "";
+    Object.keys(groupsData).forEach(groupName => {
+      const groupEl = document.createElement("div");
+
+      const title = document.createElement("div");
+      title.className = "group-title";
+      title.textContent = groupName;
+      groupEl.appendChild(title);
+
+      groupsData[groupName].forEach(item => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        const header = document.createElement("div");
+        header.className = "card-header";
+
+        const label = document.createElement("div");
+        label.className = "label";
+        label.textContent = item.config.label;
+
+        const pill = document.createElement("div");
+        pill.className =
+          "status-pill status-" + item.status.status;
+        pill.textContent = item.status.label;
+
+        header.appendChild(label);
+        header.appendChild(pill);
+        card.appendChild(header);
+
+        const addr = document.createElement("div");
+        addr.className = "address";
+        addr.textContent = item.config.address;
+        card.appendChild(addr);
+
+        const row1 = document.createElement("div");
+        row1.className = "row";
+        row1.innerHTML =
+          "<span>Balance</span><span>" + satsToBtc(item.data.balance) + " BTC</span>";
+        card.appendChild(row1);
+
+        const row2 = document.createElement("div");
+        row2.className = "row";
+        row2.innerHTML =
+          "<span>Total received</span><span>" + satsToBtc(item.data.total_received) + " BTC</span>";
+        card.appendChild(row2);
+
+        const row3 = document.createElement("div");
+        row3.className = "row";
+        row3.innerHTML =
+          "<span>Unconfirmed</span><span>" + satsToBtc(item.data.unconfirmed_balance) + " BTC</span>";
+        card.appendChild(row3);
+
+        groupEl.appendChild(card);
+      });
+
+      container.appendChild(groupEl);
+    });
+  }
+
+  // === NOTIFICATION SUPPORT (BROWSER LEVEL) ===
+  function askNotificationPermissionOnce() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission();
+    }
+  }
+
+  function checkAndNotify(address, oldData, newData) {
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    if (!oldData) return;
+
+    if (oldData.balance !== newData.balance) {
+      const diff = satsToBtc(newData.balance - oldData.balance);
+      const dir = newData.balance > oldData.balance ? "received" : "sent";
+      new Notification("BTC movement", {
+        body: `${address} ${dir} ${diff} BTC`,
+      });
+    }
+  }
+
+  const lastSnapshot = {};
+
+  // === MAIN POLL LOOP ===
+  async function poll() {
+    try {
+      const heightRes = await fetch(CONFIG.apiBase);
+      const heightJson = await heightRes.json();
+      const height = heightJson.height;
+      updateMeta(height);
+
+      const groupsData = {};
+      // Parallel fetch for addresses
+      await Promise.all(
+        CONFIG.addresses.map(async cfg => {
+          const url = `${CONFIG.apiBase}/addrs/${cfg.address}/balance`;
+          const res = await fetch(url);
+          const data = await res.json();
+
+          const status = computeStatus(
+            cfg,
+            height,
+            data.balance,
+            data.total_received
+          );
+
+          // Notification check
+          checkAndNotify(cfg.address, lastSnapshot[cfg.address], data);
+          lastSnapshot[cfg.address] = data;
+
+          const groupName = cfg.group || "Ungrouped";
+          if (!groupsData[groupName]) groupsData[groupName] = [];
+          groupsData[groupName].push({ config: cfg, data, status });
+        })
+      );
+
+      render(groupsData);
+    } catch (e) {
+      console.error("Poll error", e);
+      document.getElementById("last-updated").textContent = "Error updating";
+    }
+  }
+
+  askNotificationPermissionOnce();
+  poll();
+  setInterval(poll, CONFIG.refreshMs);
+</script>
+</body>
+</html>
