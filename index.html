@@ -448,6 +448,39 @@ async function loadBTC() {
 
 setInterval(loadBTC, 30000);
 loadBTC();
+  </script>   <!-- end of timelock monitor script -->
+
+<!-- === LIVE BTC PRICE SCRIPT === -->
+<script>
+async function loadBTC() {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true");
+    const data = await res.json();
+
+    const price = data.bitcoin.usd;
+    const change = data.bitcoin.usd_24h_change;
+    const mcap = data.bitcoin.usd_market_cap;
+    const vol = data.bitcoin.usd_24h_vol;
+
+    document.getElementById("btc-price").innerText = "$" + price.toLocaleString();
+    document.getElementById("btc-change").innerText = "24h: " + change.toFixed(2) + "%";
+    document.getElementById("btc-marketcap").innerText = "Mkt cap: " + mcap.toLocaleString();
+    document.getElementById("btc-volume").innerText = "24h vol: " + vol.toLocaleString();
+
+    document.getElementById("btc-price").className =
+      change >= 0 ? "price-up" : "price-down";
+
+  } catch (e) {
+    console.error("BTC API error", e);
+  }
+}
+
+setInterval(loadBTC, 30000);
+loadBTC();
+</script>
+
+</body>
+</html>
 </script>
 
 </body>
