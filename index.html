@@ -550,10 +550,11 @@ async function loadBTC() {
     const data = await res.json();
 
     const price = data.bitcoin.usd;
-    const change = data.bitcoin.usd_24h_change;
-    const mcap = data.bitcoin.usd_market_cap;
-    const vol = data.bitcoin.usd_24h_vol;
+CURRENT_BTC_PRICE = price;      // BTC price shared with DCA
 
+const change = data.bitcoin.usd_24h_change;
+const mcap   = data.bitcoin.usd_market_cap;
+const vol    = data.bitcoin.usd_24h_vol;
     document.getElementById("btc-price").innerText = "$" + price.toLocaleString();
     document.getElementById("btc-change").innerText = "24h: " + change.toFixed(2) + "%";
     document.getElementById("btc-marketcap").innerText = "Mkt cap: " + mcap.toLocaleString();
