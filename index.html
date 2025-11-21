@@ -389,7 +389,111 @@ function btcToSats(btc) {
   return Math.round(btc * 100_000_000);
 }
 
-function computeDcaStats(entries, currentPriceUsd) {
+function computeDcaStats
+// Render the DCA dashboard using CURRENT_BTC_PRICE and DCA_LOG
+function renderDcaDashboard() {
+  const rows = document.getElementById("dca-rows");
+  if (!rows) return;
+
+  const price = CURRENT_BTC_PRICE || 0;
+
+  rows.innerHTML = "";
+
+  let totalUsd = 0;
+  let totalBtc = 0;
+  let totalSats = 0;
+  let totalCurrent = 0;
+  let totalProfit = 0;
+  let earliestDate = null;
+
+  for (const [address, cfg] of Object.entries(DCA_LOG)) {
+    const entries = cfg.entries || [];
+    const stats = computeDcaStats(entries, price);
+
+    totalUsd += stats.totalUsd;
+    totalBtc += stats.totalBtc;
+    totalSats += stats.totalSats;
+    totalCurrent += stats.currentValue;
+    totalProfit += stats.profitUsd;
+
+    // track earliest buy date for overall "time in market"
+    for (const e of entries) {
+      const d = new Date(e.date);
+      if (!earliestDate || d < earliestDate) earliestDate = d;
+    }
+
+    // choose row style + emoji
+    let rowClass = "dca-row-neutral";
+    let statusEmoji = "⚪";
+    if (stats.profitUsd > 0.0001) {
+      rowClass = "dca-row-profit";
+      statusEmoji = "🟢";
+    } else if (stats.profitUsd < -0.0001) {
+      rowClass = "dca-row-loss";
+      statusEmoji = "🔴";
+    }
+
+    const row = document.createElement("div");
+    row.className = "dca-row " + rowClass;
+    row.innerHTML = `
+      <div class="dca-row-header">
+        <span class="dca-row-title">${statusEmoji} ${cfg.label || address}</span>
+        <span class="dca-row-sub">${address}</span>
+      </div>
+      <div class="dca-row-metrics">
+        <span>💵 $${stats.totalUsd.toFixed(2)}</span>
+        <span>₿ ${stats.totalBtc.toFixed(6)}</span>
+        <span>⚡ ${stats.totalSats.toLocaleString()} sats</span>
+        <span>📈 $${stats.currentValue.toFixed(2)}</span>
+        <span>${stats.profitUsd >= 0 ? "🟢 +" : "🔴 "}$${stats.profitUsd.toFixed(2)} (${stats.profitPct.toFixed(1)}%)</span>
+      </div>
+    `;
+    rows.appendChild(row);
+  }
+
+  // Update summary totals
+  const totalUsdEl = document.getElementById("dca-total-usd");
+  const totalBtcEl = document.getElementById("dca-total-btc");
+  const totalSatsEl = document.getElementById("dca-total-sats");
+  const avgCostEl = document.getElementById("dca-avg-cost");
+  const currentValueEl = document.getElementById("dca-current-value");
+  const profitEl = document.getElementById("dca-profit");
+  const holdingEl = document.getElementById("dca-holding");
+
+  if (totalUsdEl) totalUsdEl.textContent = "$" + totalUsd.toFixed(2);
+  if (totalBtcEl) totalBtcEl.textContent = totalBtc.toFixed(6) + " BTC";
+  if (totalSatsEl) totalSatsEl.textContent = totalSats.toLocaleString() + " sats";
+
+  const avgCost = totalBtc > 0 ? totalUsd / totalBtc : 0;
+  if (avgCostEl) {
+    avgCostEl.textContent = avgCost > 0 ? "$" + avgCost.toFixed(2) + " / BTC" : "$0 / BTC";
+  }
+
+  if (currentValueEl) {
+    currentValueEl.textContent = "$" + totalCurrent.toFixed(2);
+  }
+
+  if (profitEl) {
+    if (totalUsd <= 0) {
+      profitEl.textContent = "–";
+    } else {
+      const pct = (totalProfit / totalUsd) * 100;
+      const emoji = totalProfit > 0 ? "🟢" : totalProfit < 0 ? "🔴" : "⚪";
+      profitEl.textContent = `${emoji} $${totalProfit.toFixed(2)} (${pct.toFixed(1)}%)`;
+    }
+  }
+
+  // overall holding time
+  if (holdingEl) {
+    let holdingDays = 0;
+    if (earliestDate) {
+      const now = new Date();
+      holdingDays = Math.floor((now - earliestDate) / (1000 * 60 * 60 * 24));
+    }
+    holdingEl.textContent = holdingDays + " days";
+  }
+}
+(entries, currentPriceUsd) {
   if (!entries || entries.length === 0) {
     return {
       totalUsd: 0,
