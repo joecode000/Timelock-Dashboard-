@@ -185,7 +185,95 @@
 .dca-chip-loss {
   color: #ef4444; /* red */
 }
-  </style>
+ /* ==== DCA DASHBOARD STYLES ==== */
+.dca-panel {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  background: #101522;
+  box-shadow: 0 0 12px rgba(0,0,0,0.4);
+}
+
+.dca-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.dca-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.5rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.dca-metric {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.dca-label {
+  opacity: 0.8;
+  margin-bottom: 0.1rem;
+}
+
+.dca-value {
+  font-weight: 600;
+}
+
+.dca-subtitle {
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+/* Vault rows */
+.dca-row {
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  margin-bottom: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.dca-row-profit {
+  background: rgba(0, 180, 90, 0.15);
+  border: 1px solid rgba(0, 180, 90, 0.4);
+}
+
+.dca-row-loss {
+  background: rgba(220, 60, 60, 0.15);
+  border: 1px solid rgba(220, 60, 60, 0.4);
+}
+
+.dca-row-neutral {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dca-row-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.dca-row-title {
+  font-weight: 600;
+}
+
+.dca-row-sub {
+  opacity: 0.6;
+  font-family: monospace;
+}
+
+.dca-row-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  opacity: 0.9;
+} </style>
 </head>
 <body>
   
