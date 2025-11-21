@@ -192,6 +192,93 @@
 </div>
 
 <script>
+// ===== DCA DATA & HELPERS =====
+
+// Define your DCA (Dollar Cost Averaging) entries here.
+// Keyed by address so each vault has its own log.
+const DCA_LOG = {
+  // 2022 vault (example — edit or remove if you want)
+  "3KMrnQymf9gfu1QzYTepCGy8rv4Je2nHby": {
+    label: "2022 – Long CLTV",
+    entries: [
+      // { date: "2024-01-01", usd: 100, btc: 0.0012 },
+      // { date: "2024-03-01", usd: 150, btc: 0.0015 }
+      // Add your real buys later
+    ]
+  },
+
+  // 2026 Q1 timelock
+  "3ECBoJHeYwz4qDdovgHhME3Une89Zw63Ah": {
+    label: "2026 Q1 – Timelock",
+    entries: [
+      // Example rows; replace with your actual buys
+      // { date: "2025-01-01", usd: 200, btc: 0.0020 }
+    ]
+  },
+
+  // 2026 Q2 timelock
+  "346AQ1Gz8AP9rmzupgj36vsuecjyNdtqt4": {
+    label: "2026 Q2 – Timelock",
+    entries: [
+      // { date: "2025-02-01", usd: 200, btc: 0.0020 }
+    ]
+  },
+
+  // Add future years (2027–2030) here when you have addresses.
+};
+
+function btcToSats(btc) {
+  return Math.round(btc * 100_000_000);
+}
+
+function computeDcaStats(entries, currentPriceUsd) {
+  if (!entries || entries.length === 0) {
+    return {
+      totalUsd: 0,
+      totalBtc: 0,
+      totalSats: 0,
+      avgCost: 0,
+      currentValue: 0,
+      profitUsd: 0,
+      profitPct: 0,
+      holdingDays: 0
+    };
+  }
+
+  let totalUsd = 0;
+  let totalBtc = 0;
+  let firstDate = null;
+
+  for (const e of entries) {
+    totalUsd += e.usd;
+    totalBtc += e.btc;
+    const d = new Date(e.date);
+    if (!firstDate || d < firstDate) firstDate = d;
+  }
+
+  const totalSats = btcToSats(totalBtc);
+  const avgCost = totalBtc > 0 ? totalUsd / totalBtc : 0;
+  const currentValue = totalBtc * currentPriceUsd;
+  const profitUsd = currentValue - totalUsd;
+  const profitPct = totalUsd > 0 ? (profitUsd / totalUsd) * 100 : 0;
+
+  let holdingDays = 0;
+  if (firstDate) {
+    const now = new Date();
+    holdingDays = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+  }
+
+  return {
+    totalUsd,
+    totalBtc,
+    totalSats,
+    avgCost,
+    currentValue,
+    profitUsd,
+    profitPct,
+    holdingDays
+  };
+}
   // === CONFIG YOU EDIT ===
   const CONFIG = {
     network: "main", // "main" for mainnet
