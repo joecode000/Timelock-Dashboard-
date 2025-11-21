@@ -312,7 +312,8 @@ function computeDcaStats(entries, currentPriceUsd) {
     holdingDays
   };
 }
-  // === CONFIG YOU EDIT ===
+ // Global BTC price so DCA can use it
+let CURRENT_BTC_PRICE = 0; // === CONFIG YOU EDIT ===
   const CONFIG = {
     network: "main", // "main" for mainnet
     // How often to refresh (ms)
