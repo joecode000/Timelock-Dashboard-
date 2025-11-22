@@ -348,12 +348,11 @@
     • Grant notification permission when prompted to get alerts on balance changes.
   </div>
 </div>
-
 <script>
 // ===== DCA DATA & HELPERS =====
 
-// Define your DCA (Dollar Cost Averaging) entries here.
-// Keyed by address so each vault has its own log.
+// Single source of truth for your DCA entries.
+// Keyed by vault address.
 const DCA_LOG = {
   // 2022 Vault
   "3KMrnQymf9gfu1QzYTepCGy8rv4Je2nHby": {
@@ -361,172 +360,51 @@ const DCA_LOG = {
     entries: [
       { date: "2022-03-12", usd: 500, btc: 0.01299249 }
     ]
-  },
-
-  // 2026 Q1 timelock
-  "3ECBoJHeYwz4qDdovgHhME3Une89Zw63Ah": {
-    label: "2026 Q1 – Timelock",
-    entries: [
-      // add real buys here later
-    ]
   }
+
+  // You can add more vaults here later, like:
+  // "3ECBoJHeYwz4qDdovgHhME3Une89Zw63Ah": {
+  //   label: "2026 Q1 – Timelock",
+  //   entries: [ /* your buys */ ]
+  // }
 };
 
-  // 2026 Q2 timelock
-  "346AQ1Gz8AP9rmzupgj36vsuecjyNdtqt4": {
-    label: "2026 Q2 – Timelock",
-    entries: [
-      // { date: "2025-02-01", usd: 200, btc: 0.0020 }
-    ]
-  },
-
-  // Add future years (2027–2030) here when you have addresses.
-};
-
-function btcToSats(btc) {
-  return Math.round(btc * 100_000_000);
-}
-
-function computeDcaStats
-// Render the DCA dashboard using CURRENT_BTC_PRICE and DCA_LOG
-function renderDcaDashboard() {
-  const rows = document.getElementById("dca-rows");
-  if (!rows) return;
-
-  const price = CURRENT_BTC_PRICE || 0;
-
-  rows.innerHTML = "";
-
+// Compute totals for one vault
+function computeDcaStats(entries, currentPriceUsd) {
   let totalUsd = 0;
   let totalBtc = 0;
-  let totalSats = 0;
-  let totalCurrent = 0;
-  let totalProfit = 0;
   let earliestDate = null;
 
-  for (const [address, cfg] of Object.entries(DCA_LOG)) {
-    const entries = cfg.entries || [];
-    const stats = computeDcaStats(entries, price);
+  for (const row of entries) {
+    const usd = Number(row.usd) || 0;
+    const btc = Number(row.btc) || 0;
 
-    totalUsd += stats.totalUsd;
-    totalBtc += stats.totalBtc;
-    totalSats += stats.totalSats;
-    totalCurrent += stats.currentValue;
-    totalProfit += stats.profitUsd;
+    totalUsd += usd;
+    totalBtc += btc;
 
-    // track earliest buy date for overall "time in market"
-    for (const e of entries) {
-      const d = new Date(e.date);
-      if (!earliestDate || d < earliestDate) earliestDate = d;
-    }
-
-    // choose row style + emoji
-    let rowClass = "dca-row-neutral";
-    let statusEmoji = "⚪";
-    if (stats.profitUsd > 0.0001) {
-      rowClass = "dca-row-profit";
-      statusEmoji = "🟢";
-    } else if (stats.profitUsd < -0.0001) {
-      rowClass = "dca-row-loss";
-      statusEmoji = "🔴";
-    }
-
-    const row = document.createElement("div");
-    row.className = "dca-row " + rowClass;
-    row.innerHTML = `
-      <div class="dca-row-header">
-        <span class="dca-row-title">${statusEmoji} ${cfg.label || address}</span>
-        <span class="dca-row-sub">${address}</span>
-      </div>
-      <div class="dca-row-metrics">
-        <span>💵 $${stats.totalUsd.toFixed(2)}</span>
-        <span>₿ ${stats.totalBtc.toFixed(6)}</span>
-        <span>⚡ ${stats.totalSats.toLocaleString()} sats</span>
-        <span>📈 $${stats.currentValue.toFixed(2)}</span>
-        <span>${stats.profitUsd >= 0 ? "🟢 +" : "🔴 "}$${stats.profitUsd.toFixed(2)} (${stats.profitPct.toFixed(1)}%)</span>
-      </div>
-    `;
-    rows.appendChild(row);
-  }
-
-  // Update summary totals
-  const totalUsdEl = document.getElementById("dca-total-usd");
-  const totalBtcEl = document.getElementById("dca-total-btc");
-  const totalSatsEl = document.getElementById("dca-total-sats");
-  const avgCostEl = document.getElementById("dca-avg-cost");
-  const currentValueEl = document.getElementById("dca-current-value");
-  const profitEl = document.getElementById("dca-profit");
-  const holdingEl = document.getElementById("dca-holding");
-
-  if (totalUsdEl) totalUsdEl.textContent = "$" + totalUsd.toFixed(2);
-  if (totalBtcEl) totalBtcEl.textContent = totalBtc.toFixed(6) + " BTC";
-  if (totalSatsEl) totalSatsEl.textContent = totalSats.toLocaleString() + " sats";
-
-  const avgCost = totalBtc > 0 ? totalUsd / totalBtc : 0;
-  if (avgCostEl) {
-    avgCostEl.textContent = avgCost > 0 ? "$" + avgCost.toFixed(2) + " / BTC" : "$0 / BTC";
-  }
-
-  if (currentValueEl) {
-    currentValueEl.textContent = "$" + totalCurrent.toFixed(2);
-  }
-
-  if (profitEl) {
-    if (totalUsd <= 0) {
-      profitEl.textContent = "–";
-    } else {
-      const pct = (totalProfit / totalUsd) * 100;
-      const emoji = totalProfit > 0 ? "🟢" : totalProfit < 0 ? "🔴" : "⚪";
-      profitEl.textContent = `${emoji} $${totalProfit.toFixed(2)} (${pct.toFixed(1)}%)`;
+    if (row.date) {
+      const d = new Date(row.date);
+      if (!isNaN(d)) {
+        if (!earliestDate || d < earliestDate) {
+          earliestDate = d;
+        }
+      }
     }
   }
 
-  // overall holding time
-  if (holdingEl) {
-    let holdingDays = 0;
-    if (earliestDate) {
-      const now = new Date();
-      holdingDays = Math.floor((now - earliestDate) / (1000 * 60 * 60 * 24));
-    }
-    holdingEl.textContent = holdingDays + " days";
-  }
-}
-(entries, currentPriceUsd) {
-  if (!entries || entries.length === 0) {
-    return {
-      totalUsd: 0,
-      totalBtc: 0,
-      totalSats: 0,
-      avgCost: 0,
-      currentValue: 0,
-      profitUsd: 0,
-      profitPct: 0,
-      holdingDays: 0
-    };
-  }
-
-  let totalUsd = 0;
-  let totalBtc = 0;
-  let firstDate = null;
-
-  for (const e of entries) {
-    totalUsd += e.usd;
-    totalBtc += e.btc;
-    const d = new Date(e.date);
-    if (!firstDate || d < firstDate) firstDate = d;
-  }
-
-  const totalSats = btcToSats(totalBtc);
-  const avgCost = totalBtc > 0 ? totalUsd / totalBtc : 0;
-  const currentValue = totalBtc * currentPriceUsd;
+  const totalSats = Math.round(totalBtc * 100000000);
+  const price = Number(currentPriceUsd) || 0;
+  const currentValue = totalBtc * price;
   const profitUsd = currentValue - totalUsd;
   const profitPct = totalUsd > 0 ? (profitUsd / totalUsd) * 100 : 0;
 
   let holdingDays = 0;
-  if (firstDate) {
+  if (earliestDate) {
     const now = new Date();
-    holdingDays = Math.floor((now - firstDate) / (1000 * 60 * 60 * 24));
+    holdingDays = Math.floor((now - earliestDate) / (1000 * 60 * 60 * 24));
   }
+
+  const avgCost = totalBtc > 0 ? totalUsd / totalBtc : 0;
 
   return {
     totalUsd,
@@ -539,240 +417,92 @@ function renderDcaDashboard() {
     holdingDays
   };
 }
- // Global BTC price so DCA can use it
-let CURRENT_BTC_PRICE = 0;// Kick DCA dashboard after load so static totals show
-setTimeout(() => {
-  if (typeof renderDcaDashboard === "function") {
-    renderDcaDashboard();
-  }
-}, 2000); // === CONFIG YOU EDIT ===
-  const CONFIG = {
-    network: "main", // "main" for mainnet
-    // How often to refresh (ms)
-    refreshMs: 30000,
-    // How many blocks before unlock to treat as "soon"
-    soonThresholdBlocks: 144, // ~1 day
-    // Data source: BlockCypher simple usage
-    apiBase: "https://api.blockcypher.com/v1/btc/main",
-    // Addresses you want to monitor
-    // For timelocks, you manually enter unlock info you used when creating them.
-    addresses: [
-      {
-        label: "Vault A – Long CLTV",
-        address: 3KMrnQymf9gfu1QzYTepCGy8rv4Je2nHby",
-        group: "Long Timelocks",
-        unlockType: "height",      // "height" or "time"
-        unlockHeight: 900000,      // if unlockType === "height"
-        unlockTimeUnix: null       // if unlockType === "time" (Unix seconds), else null
-      },
-      {
-        label: "Vault B – 2026 Release",
-        address: "YOUR_SECOND_ADDRESS_HERE",
-        group: "Medium Timelocks",
-        unlockType: "time",
-        unlockHeight: null,
-        unlockTimeUnix: 1780000000 // example future timestamp
-      },
-      {
-        label: "Hot Watch Only",
-        address: "YOUR_THIRD_ADDRESS_HERE",
-        group: "Hot / Operational",
-        unlockType: null,
-        unlockHeight: null,
-        unlockTimeUnix: null
-      }
-    ]
-  };
 
-  // === SIMPLE HELPERS ===
-  function satsToBtc(sats) {
-    return (sats / 100000000).toFixed(8);
-  }
+// Render the DCA dashboard into the top cards + vault rows
+function renderDcaDashboard() {
+  const price = window.CURRENT_BTC_PRICE || 0;
 
-  function unixToLocal(unix) {
-    if (!unix) return "—";
-    return new Date(unix * 1000).toLocaleString();
-  }
+  const rowsEl = document.getElementById("dca-rows");
+  if (!rowsEl) return;
 
-  function updateMeta(height) {
-    document.getElementById("block-height").textContent = "Height: " + height;
-    document.getElementById("last-updated").textContent =
-      "Updated: " + new Date().toLocaleTimeString();
-  }
+  rowsEl.innerHTML = "";
 
-  function computeStatus(addrCfg, height, balance, totalReceived) {
-    // If nothing ever received
-    if (!totalReceived) {
-      return { status: "locked", label: "No funds yet" };
+  let grandUsd = 0;
+  let grandBtc = 0;
+  let grandSats = 0;
+  let grandCurrent = 0;
+  let grandProfit = 0;
+  let maxHoldingDays = 0;
+
+  for (const [address, cfg] of Object.entries(DCA_LOG)) {
+    const entries = cfg.entries || [];
+    const stats = computeDcaStats(entries, price);
+
+    grandUsd     += stats.totalUsd;
+    grandBtc     += stats.totalBtc;
+    grandSats    += stats.totalSats;
+    grandCurrent += stats.currentValue;
+    grandProfit  += stats.profitUsd;
+    if (stats.holdingDays > maxHoldingDays) {
+      maxHoldingDays = stats.holdingDays;
     }
 
-    const nowUnix = Math.floor(Date.now() / 1000);
-
-    // Spent (no current balance, but something was received)
-    if (balance === 0) {
-      return { status: "spent", label: "Spent" };
-    }
-
-    // If no timelock metadata, treat as "unlocked"
-    if (!addrCfg.unlockType) {
-      return { status: "unlocked", label: "Live / No Timelock" };
-    }
-
-    if (addrCfg.unlockType === "height" && addrCfg.unlockHeight) {
-      const remaining = addrCfg.unlockHeight - height;
-      if (remaining > CONFIG.soonThresholdBlocks) {
-        return { status: "locked", label: `Locked · ${remaining} blocks left` };
-      } else if (remaining > 0) {
-        return { status: "soon", label: `Unlocking soon · ${remaining} blocks` };
-      } else {
-        return { status: "unlocked", label: `Unlocked at height ${addrCfg.unlockHeight}` };
-      }
-    }
-
-    if (addrCfg.unlockType === "time" && addrCfg.unlockTimeUnix) {
-      const remainingSec = addrCfg.unlockTimeUnix - nowUnix;
-      if (remainingSec > 48 * 3600) {
-        return { status: "locked", label: "Locked until " + unixToLocal(addrCfg.unlockTimeUnix) };
-      } else if (remainingSec > 0) {
-        return { status: "soon", label: "Unlocking soon · " + Math.round(remainingSec / 3600) + "h" };
-      } else {
-        return { status: "unlocked", label: "Unlocked at " + unixToLocal(addrCfg.unlockTimeUnix) };
-      }
-    }
-
-    return { status: "unlocked", label: "Live" };
+    // Build one vault row
+    const row = document.createElement("div");
+    row.className = "dca-row dca-row-neutral";
+    row.innerHTML = `
+      <div class="dca-row-header">
+        <div class="dca-row-title">${cfg.label || "Vault"}</div>
+        <div class="dca-row-sub">${address}</div>
+      </div>
+      <div class="dca-row-metrics">
+        <span>Invested: $${stats.totalUsd.toFixed(2)}</span>
+        <span>BTC: ${stats.totalBtc.toFixed(8)}</span>
+        <span>Sats: ${stats.totalSats.toLocaleString()}</span>
+      </div>
+    `;
+    rowsEl.appendChild(row);
   }
 
-  function render(groupsData) {
-    const container = document.getElementById("groups");
-    container.innerHTML = "";
-    Object.keys(groupsData).forEach(groupName => {
-      const groupEl = document.createElement("div");
+  // Helper to safely set text
+  const $ = (id) => document.getElementById(id);
 
-      const title = document.createElement("div");
-      title.className = "group-title";
-      title.textContent = groupName;
-      groupEl.appendChild(title);
-
-      groupsData[groupName].forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
-
-        const header = document.createElement("div");
-        header.className = "card-header";
-
-        const label = document.createElement("div");
-        label.className = "label";
-        label.textContent = item.config.label;
-
-        const pill = document.createElement("div");
-        pill.className =
-          "status-pill status-" + item.status.status;
-        pill.textContent = item.status.label;
-
-        header.appendChild(label);
-        header.appendChild(pill);
-        card.appendChild(header);
-
-        const addr = document.createElement("div");
-        addr.className = "address";
-        addr.textContent = item.config.address;
-        card.appendChild(addr);
-
-        const row1 = document.createElement("div");
-        row1.className = "row";
-        row1.innerHTML =
-          "<span>Balance</span><span>" + satsToBtc(item.data.balance) + " BTC</span>";
-        card.appendChild(row1);
-
-        const row2 = document.createElement("div");
-        row2.className = "row";
-        row2.innerHTML =
-          "<span>Total received</span><span>" + satsToBtc(item.data.total_received) + " BTC</span>";
-        card.appendChild(row2);
-
-        const row3 = document.createElement("div");
-        row3.className = "row";
-        row3.innerHTML =
-          "<span>Unconfirmed</span><span>" + satsToBtc(item.data.unconfirmed_balance) + " BTC</span>";
-        card.appendChild(row3);
-
-        groupEl.appendChild(card);
-      });
-
-      container.appendChild(groupEl);
-    });
+  if ($("dca-total-usd")) {
+    $("dca-total-usd").innerText = "$" + grandUsd.toFixed(2);
   }
-
-  // === NOTIFICATION SUPPORT (BROWSER LEVEL) ===
-  function askNotificationPermissionOnce() {
-    if (!("Notification" in window)) return;
-    if (Notification.permission === "default") {
-      Notification.requestPermission();
-    }
+  if ($("dca-total-btc")) {
+    $("dca-total-btc").innerText = grandBtc.toFixed(8) + " BTC";
   }
-
-  function checkAndNotify(address, oldData, newData) {
-    if (!("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    if (!oldData) return;
-
-    if (oldData.balance !== newData.balance) {
-      const diff = satsToBtc(newData.balance - oldData.balance);
-      const dir = newData.balance > oldData.balance ? "received" : "sent";
-      new Notification("BTC movement", {
-        body: `${address} ${dir} ${diff} BTC`,
-      });
-    }
+  if ($("dca-total-sats")) {
+    $("dca-total-sats").innerText = grandSats.toLocaleString() + " sats";
   }
-
-  const lastSnapshot = {};
-
-  // === MAIN POLL LOOP ===
-  async function poll() {
-    try {
-      const heightRes = await fetch(CONFIG.apiBase);
-      const heightJson = await heightRes.json();
-      const height = heightJson.height;
-      updateMeta(height);
-
-      const groupsData = {};
-      // Parallel fetch for addresses
-      await Promise.all(
-        CONFIG.addresses.map(async cfg => {
-          const url = `${CONFIG.apiBase}/addrs/${cfg.address}/balance`;
-          const res = await fetch(url);
-          const data = await res.json();
-
-          const status = computeStatus(
-            cfg,
-            height,
-            data.balance,
-            data.total_received
-          );
-
-          // Notification check
-          checkAndNotify(cfg.address, lastSnapshot[cfg.address], data);
-          lastSnapshot[cfg.address] = data;
-
-          const groupName = cfg.group || "Ungrouped";
-          if (!groupsData[groupName]) groupsData[groupName] = [];
-          groupsData[groupName].push({ config: cfg, data, status });
-        })
-      );
-
-      render(groupsData);
-    } catch (e) {
-      console.error("Poll error", e);
-      document.getElementById("last-updated").textContent = "Error updating";
-    }
+  if ($("dca-avg-cost")) {
+    const avg = grandBtc > 0 ? (grandUsd / grandBtc) : 0;
+    $("dca-avg-cost").innerText = "$" + avg.toFixed(0) + " / BTC";
   }
+  if ($("dca-current")) {
+    $("dca-current").innerText = "$" + grandCurrent.toFixed(2);
+  }
+  if ($("dca-profit")) {
+    const pct = grandUsd > 0 ? (grandProfit / grandUsd) * 100 : 0;
+    const sign = grandProfit >= 0 ? "+" : "";
+    $("dca-profit").innerText =
+      `${sign}$${grandProfit.toFixed(2)} (${pct.toFixed(2)}%)`;
+  }
+  if ($("dca-holding")) {
+    $("dca-holding").innerText = maxHoldingDays + " days";
+  }
+}
 
-  askNotificationPermissionOnce();
-  poll();
-  setInterval(poll, CONFIG.refreshMs);
+// Global price value (shared with live BTC script)
+window.CURRENT_BTC_PRICE = window.CURRENT_BTC_PRICE || 0;
 
-  </script>   <!-- end of timelock monitor script -->
+// On initial load, render once with price = 0
+// (so you still see your $500 total invested even before price arrives)
+document.addEventListener("DOMContentLoaded", () => {
+  renderDcaDashboard();
+});
+</script> <!-- end of timelock monitor script -->
 
 <!-- === LIVE BTC PRICE SCRIPT === -->
 <script>
