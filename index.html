@@ -468,9 +468,10 @@ function renderDcaDashboard() {
     const avg = grandBtc > 0 ? (grandUsd / grandBtc) : 0;
     $("dca-avg-cost").innerText = "$" + avg.toFixed(0) + " / BTC";
   }
-  if ($("dca-current")) {
-    $("dca-current").innerText = "$" + grandCurrent.toFixed(2);
-  }
+  if (document.getElementById("dca-current-value")) {
+    document.getElementById("dca-current-value").innerText =
+        "$" + grandCurrent.toFixed(2);
+}
   if ($("dca-profit")) {
     const pct = grandUsd > 0 ? (grandProfit / grandUsd) * 100 : 0;
     const sign = grandProfit >= 0 ? "+" : "";
