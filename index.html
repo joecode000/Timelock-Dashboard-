@@ -355,18 +355,23 @@
 // Define your DCA (Dollar Cost Averaging) entries here.
 // Keyed by address so each vault has its own log.
 const DCA_LOG = {
-  // 2022 vault (example — edit or remove if you want)
+  // 2022 vault
   "3KMrnQymf9gfu1QzYTepCGy8rv4Je2nHby": {
-  label: "2022 – Long CLTV",
-  entries: [
-    { date: "2022-03-12", usd: 500, btc: 0.01299249 }
-  ]
-}
-      // { date: "2024-01-01", usd: 100, btc: 0.0012 },
-      // { date: "2024-03-01", usd: 150, btc: 0.0015 }
-      // Add your real buys later
+    label: "2022 – Long CLTV",
+    entries: [
+      { date: "2022-03-12", usd: 500, btc: 0.01299249 }
     ]
   },
+
+  // 2026 Q1 timelock
+  "3ECBoJHeYwz4qDdovgHhME3Une89Zw63Ah": {
+    label: "2026 Q1 – Timelock",
+    entries: [
+      // Example rows; replace with your actual buys later
+      // { date: "2025-01-01", usd: 200, btc: 0.0020 }
+    ]
+  }
+};
 
   // 2026 Q1 timelock
   "3ECBoJHeYwz4qDdovgHhME3Une89Zw63Ah": {
