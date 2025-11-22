@@ -536,7 +536,10 @@ document.getElementById("btc-price").className =
 }
 
 setInterval(loadBTC, 30000);
-loadBTC();
+document.addEventListener("DOMContentLoaded", () => {
+    loadBTC();
+    loadGoldMarketCap();   // ← required
+});
 </script>
 
 </body>
