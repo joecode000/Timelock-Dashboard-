@@ -782,10 +782,10 @@ async function loadBTC() {
     const data = await res.json();
 
     const price  = data.bitcoin.usd;
-CURRENT_BTC_PRICE = price;  // Recalculate DCA dashboard whenever price updates
-if (typeof renderDcaDashboard === "function") {
-  renderDcaDashboard();
-}      // BTC price shared with DCA
+CURRENT_BTC_PRICE = price; if (typeof renderDcaDashboard === "function") {
+    renderDcaDashboard();
+} // Recalculate DCA dashboard whenever price updates
+     // BTC price shared with DCA
 
 const change = data.bitcoin.usd_24h_change;
 const mcap   = data.bitcoin.usd_market_cap;
