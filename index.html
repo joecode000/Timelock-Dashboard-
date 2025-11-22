@@ -549,7 +549,12 @@ function renderDcaDashboard() {
   };
 }
  // Global BTC price so DCA can use it
-let CURRENT_BTC_PRICE = 0; // === CONFIG YOU EDIT ===
+let CURRENT_BTC_PRICE = 0;// Kick DCA dashboard after load so static totals show
+setTimeout(() => {
+  if (typeof renderDcaDashboard === "function") {
+    renderDcaDashboard();
+  }
+}, 2000); // === CONFIG YOU EDIT ===
   const CONFIG = {
     network: "main", // "main" for mainnet
     // How often to refresh (ms)
