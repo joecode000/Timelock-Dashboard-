@@ -497,7 +497,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
 <!-- === LIVE BTC PRICE SCRIPT === -->
 <script>
-async function loadBTC() {
+async function loadBTC() {async function loadGoldMarketCap() {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=usd&include_market_cap=true"
+    );
+    const data = await res.json();
+    const mcap = data.gold.usd_market_cap;
+
+    document.getElementById("gold-marketcap").innerText =
+      "$" + mcap.toLocaleString();
+  } catch (e) {
+    console.error("Gold API error", e);
+  }
+}
   try {
     const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true");
     const data = await res.json();
