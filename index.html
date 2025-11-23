@@ -489,41 +489,31 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadBTC() {
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true"
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
     );
     const data = await res.json();
 
     const price = data.bitcoin.usd;
-    CURRENT_BTC_PRICE = price;
+    // share with DCA dashboard
+    window.CURRENT_BTC_PRICE = price;
 
-    // Recalculate DCA dashboard when price updates
+    // re-render DCA if available
     if (typeof renderDcaDashboard === "function") {
       renderDcaDashboard();
     }
 
-    const change = data.bitcoin.usd_24hr_change;
-    const mcap   = data.bitcoin.usd_market_cap;
-    const vol    = data.bitcoin.usd_24hr_vol;
-
-    document.getElementById("btc-price").innerText     = "$" + price.toLocaleString();
-    document.getElementById("btc-change").innerText    = "24h: " + change.toFixed(2) + "%";
-    document.getElementById("btc-marketcap").innerText = "Mkt cap: " + mcap.toLocaleString();
-    document.getElementById("btc-volume").innerText    = "24h vol: " + vol.toLocaleString();
-
-    document.getElementById("btc-price").className =
-      change >= 0 ? "price-up" : "price-down";
+    const priceEl = document.getElementById("btc-price");
+    if (priceEl) {
+      priceEl.innerText = "$" + price.toLocaleString();
+    }
   } catch (e) {
     console.error("BTC API error", e);
   }
 }
 
-
-// Refresh both every 30 seconds
-setInterval(() => {
-  loadBTC();
-}, 30000);
-
-// Run immediately on load
+// refresh every 30s
+setInterval(loadBTC, 30000);
+// run once on load
 loadBTC();
 </script>
 </body>
