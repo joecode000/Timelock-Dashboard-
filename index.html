@@ -495,24 +495,31 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 </script> <!-- end of timelock monitor script -->
 
-<!-- === LIVE BTC PRICE SCRIPT === -->
+<!-- === LIVE BTC & GOLD PRICE SCRIPTS === -->
 <script>
 async function loadBTC() {
   try {
-    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true");
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true&include_24hr_vol=true&include_24hr_change=true"
+    );
     const data = await res.json();
 
     const price = data.bitcoin.usd;
     CURRENT_BTC_PRICE = price;
 
+    // Recalculate DCA dashboard when price updates
+    if (typeof renderDcaDashboard === "function") {
+      renderDcaDashboard();
+    }
+
     const change = data.bitcoin.usd_24hr_change;
     const mcap   = data.bitcoin.usd_market_cap;
     const vol    = data.bitcoin.usd_24hr_vol;
 
-    document.getElementById("btc-price").innerText = "$" + price.toLocaleString();
-    document.getElementById("btc-change").innerText = "24h: " + change.toFixed(2) + "%";
+    document.getElementById("btc-price").innerText     = "$" + price.toLocaleString();
+    document.getElementById("btc-change").innerText    = "24h: " + change.toFixed(2) + "%";
     document.getElementById("btc-marketcap").innerText = "Mkt cap: " + mcap.toLocaleString();
-    document.getElementById("btc-volume").innerText = "24h vol: " + vol.toLocaleString();
+    document.getElementById("btc-volume").innerText    = "24h vol: " + vol.toLocaleString();
 
     document.getElementById("btc-price").className =
       change >= 0 ? "price-up" : "price-down";
@@ -520,7 +527,8 @@ async function loadBTC() {
     console.error("BTC API error", e);
   }
 }
-{async function loadGoldMarketCap() {
+
+async function loadGoldMarketCap() {
   try {
     const res = await fetch(
       "https://api.coingecko.com/api/v3/simple/price?ids=gold&vs_currencies=usd&include_market_cap=true"
@@ -534,18 +542,16 @@ async function loadBTC() {
     console.error("Gold API error", e);
   }
 }
+
+// Refresh both every 30 seconds
 setInterval(() => {
-    loadBTC();
-    loadGoldMarketCap();
+  loadBTC();
+  loadGoldMarketCap();
 }, 30000);
 
-// run both immediately
+// Run both immediately on load
 loadBTC();
 loadGoldMarketCap();
 </script>
-</body>
-</html>
-</script>
-
 </body>
 </html>
