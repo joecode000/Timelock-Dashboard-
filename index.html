@@ -489,16 +489,19 @@ document.addEventListener("DOMContentLoaded", () => {
 </script> <!-- end of timelock monitor script -->
 
 <!-- === LIVE BTC SCRIPTS === -->
+<!-- === LIVE BTC SCRIPTS === -->
 <script>
 async function loadBTC() {
   try {
     const res = await fetch(
-  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true"
-);
+      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true"
+    );
     const data = await res.json();
 
     const price = data.bitcoin.usd;
-    // share with DCA dashboard
+    const mcap  = data.bitcoin.usd_market_cap;
+
+    // share price with DCA dashboard
     window.CURRENT_BTC_PRICE = price;
 
     // re-render DCA if available
@@ -506,19 +509,28 @@ async function loadBTC() {
       renderDcaDashboard();
     }
 
+    // update live price
     const priceEl = document.getElementById("btc-price");
     if (priceEl) {
       priceEl.innerText = "$" + price.toLocaleString();
     }
+
+    // update live market cap
+    const mcapEl = document.getElementById("btc-marketcap");
+    if (mcapEl) {
+      mcapEl.innerText = "Mkt cap: $" + Math.round(mcap).toLocaleString();
+    }
+
   } catch (e) {
     console.error("BTC API error", e);
   }
 }
 
-// refresh every 30s
-setInterval(loadBTC, 30000);
 // run once on load
 loadBTC();
+
+// refresh every 30s
+setInterval(loadBTC, 30000);
 </script>
 </body>
 </html>
