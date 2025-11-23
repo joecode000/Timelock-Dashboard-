@@ -548,11 +548,17 @@ document.getElementById("btc-price").className =
   }
 }
 
-setInterval(loadBTC, 30000);
-document.addEventListener("DOMContentLoaded", () => {
+setInterval(() => {
     loadBTC();
-    loadGoldMarketCap();   // ← required
-});
+    loadGoldMarketCap();
+}, 30000);
+
+// run both immediately
+loadBTC();
+loadGoldMarketCap();
+</script>
+</body>
+</html>
 </script>
 
 </body>
