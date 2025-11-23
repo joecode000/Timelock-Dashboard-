@@ -493,8 +493,8 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadBTC() {
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd"
-    );
+  "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_market_cap=true"
+);
     const data = await res.json();
 
     const price = data.bitcoin.usd;
